@@ -32112,6 +32112,37 @@ const mod1 = {
     dom: dom$1,
     gui
 };
+const colors = {
+    background: new mod.Color("#000"),
+    primary: new mod.Color("#c9ada7"),
+    highlight: new mod.Color("#f2e9e4")
+};
+const materials = [
+    mod.MeshBasicMaterial,
+    mod.MeshNormalMaterial,
+    mod.MeshLambertMaterial,
+    mod.MeshPhongMaterial,
+    mod.MeshStandardMaterial, 
+];
+const materialsOptions = materials.reduce((acc, curr, i)=>({
+        ...acc,
+        [`THREE.${curr.name}`]: i
+    }), {});
+const materialsProps = {
+    emissive: createProp("color"),
+    color: createProp("color"),
+    specular: createProp("color"),
+    shininess: createProp("range", 0, 2048),
+    roughness: createProp("range", 0, 1),
+    metalness: createProp("range", 0, 1)
+};
+function createProp(type, min = 0, max = 0) {
+    return {
+        type,
+        min,
+        max
+    };
+}
 let { innerWidth: width , innerHeight: height  } = window;
 const scene = new mod.Scene();
 const camera = new mod.PerspectiveCamera(75, width / height, 0.1, 1000);
@@ -32120,97 +32151,60 @@ camera.position.set(0, 0, 5);
 camera.lookAt(new mod.Vector3(0, 0, 0));
 renderer.setSize(width, height);
 document.body.appendChild(renderer.domElement);
+scene.background = new mod.Color(colors.background);
 scene.add(new mod.AxesHelper(5));
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 const stats = Stats();
 document.body.appendChild(stats.dom);
-const gui1 = new mod1.GUI({
-    name: "Configure Geometries"
-});
-const material = new mod.MeshBasicMaterial({
-    wireframe: false,
-    transparent: true,
-    side: mod.DoubleSide,
-    map: new mod.TextureLoader().load("/assets/course/grid.png"),
-    envMap: (()=>{
-        const envTexture = new mod.CubeTextureLoader().load([
-            "px",
-            "nx",
-            "py",
-            "ny",
-            "pz",
-            "nz"
-        ].map((path)=>`/assets/course/${path}_50.png`));
-        envTexture.mapping = mod.CubeRefractionMapping;
-        return envTexture;
-    })()
-});
 const materialData = {
-    color: material.color.getHex()
+    material: 0,
+    props: {
+        emissive: colors.background.getHex(),
+        color: colors.primary.getHex(),
+        specular: colors.highlight.getHex(),
+        shininess: 1000,
+        roughness: 0.5,
+        metalness: 0.5
+    }
 };
-const materialFolder = gui1.addFolder("THREE.MeshBasicMaterial");
-materialFolder.add(material, "transparent").onChange(updateMaterial);
-materialFolder.add(material, "opacity", 0, 1, 0.01).onChange(updateMaterial);
-materialFolder.add(material, "wireframe");
-materialFolder.add(material, "reflectivity", 0, 1, 0.1);
-materialFolder.add(material, "refractionRatio", 0, 1, 0.1);
-materialFolder.addColor(materialData, "color").onChange(()=>material.color.setHex(Number(materialData.color)));
-materialFolder.add(material, "combine", {
-    MultiplyOperation: mod.MultiplyOperation,
-    MixOperation: mod.MixOperation,
-    AddOperation: mod.AddOperation
-}).onChange(updateMaterial);
-const cube = addMesh("Cube", 0, mod.BoxGeometry, {
-    width: 1,
-    height: 1,
-    depth: 1,
-    widthSegments: 1,
-    heightSegments: 1,
-    depthSegments: 1
+const geometry = new mod.TorusKnotGeometry();
+let material = new mod.MeshBasicMaterial(materialData.props);
+let mesh = new mod.Mesh(geometry, material);
+scene.add(mesh);
+scene.add(createLight(10, 10, 10));
+scene.add(createLight(-10, -10, -10));
+const gui1 = new mod1.GUI({
+    name: "Configure Material"
 });
-addMesh("Sphere", 4, mod.SphereGeometry, {
-    radius: 1,
-    widthSegments: 8,
-    heightSegments: 6,
-    phiStart: 0,
-    phiLength: Math.PI * 2,
-    thetaStart: 0,
-    thetaLength: Math.PI
+gui1.add(materialData, "material", materialsOptions).onChange(()=>{
+    material = new materials[Number(materialData.material)](materialData.props);
+    mesh.material = material;
 });
-addMesh("Icosohedron", 8, mod.IcosahedronGeometry, {
-    radius: 1,
-    detail: 0
-}, (state)=>({
-        ...state,
-        detail: parseInt(state.detail.toString())
-    }));
-addMesh("Torus", 12, mod.TorusGeometry, {
-    radius: 1,
-    tube: 0.4,
-    radialSegments: 8,
-    tubularSegments: 6,
-    arc: Math.PI * 2
-});
-addMesh("Torus Knot", 16, mod.TorusKnotGeometry, {
-    radius: 1,
-    tube: 0.4,
-    radialSegments: 64,
-    tubularSegments: 8,
-    p: 2,
-    q: 3
-});
-addMesh("Plane", 20, mod.PlaneGeometry, {
-    width: 1,
-    height: 1,
-    widthSegments: 1,
-    heightSegments: 1
+Object.keys(materialsProps).forEach((_key)=>{
+    const key = _key;
+    const propData = materialsProps[key];
+    if (propData.type === "color") {
+        gui1.addColor(materialData.props, key).onChange(()=>{
+            if (key in material) {
+                material[key].setHex(Number(materialData.props[key]));
+                updateMaterial();
+            }
+        });
+    } else if (propData.type === "range") {
+        gui1.add(materialData.props, key, propData.min, propData.max).onChange(()=>{
+            if (key in material) {
+                material[key] = materialData.props[key];
+            }
+            updateMaterial();
+        });
+    }
 });
 const debugWindow = document.body.querySelector(".debug__content");
+debugWindow.innerHTML = 'Note: emissive means the color will show even without lighting. Also, some options like "specular" will throw warnings in the console because they don\'t exist on all materials';
 renderer.setAnimationLoop(()=>{
     renderer.render(scene, camera);
     orbitControls.update();
     stats.update();
-    debugWindow.innerHTML = `Cube Matrix<br />${cube.matrix.elements.map((n)=>n.toFixed(1)).join("<br />")}`;
 });
 addEventListener("resize", ()=>{
     width = innerWidth;
@@ -32219,47 +32213,11 @@ addEventListener("resize", ()=>{
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 });
+function createLight(...position) {
+    const light = new mod.PointLight(0xffffff, 1);
+    light.position.set(...position);
+    return light;
+}
 function updateMaterial() {
-    material.side = Number(material.side);
-    material.combine = Number(material.combine);
-    material.needsUpdate = true;
-}
-function addMesh(title, x, meshType, state, modifyState = null) {
-    const mesh = new mod.Mesh(new meshType(...Object.values(state)), material);
-    mesh.position.x = x;
-    scene.add(mesh);
-    const properties = [
-        "Position",
-        "Rotation",
-        "Scale"
-    ];
-    const folder = gui1.addFolder(title);
-    addTransformationFolders(properties, folder, mesh);
-    addGeometryFolder("Geometry", folder, mesh, state, (mesh, state)=>{
-        mesh.geometry.dispose();
-        mesh.geometry = new meshType(...Object.values(modifyState ? modifyState(state) : state));
-    });
-    return mesh;
-}
-function addTransformationFolder(title, gui, object) {
-    const axes = [
-        "x",
-        "y",
-        "z"
-    ];
-    const transformationFolder = gui.addFolder(title);
-    axes.forEach((axis)=>{
-        transformationFolder.add(object[title.toLowerCase()] || {}, axis, -10, 10, 0.1);
-    });
-    return transformationFolder;
-}
-function addTransformationFolders(titles, gui, object) {
-    return titles.map((title)=>addTransformationFolder(title, gui, object));
-}
-function addGeometryFolder(title, folder, mesh, state, regenerateGeometry) {
-    const geometryFolder = folder.addFolder(title);
-    Object.keys(state).forEach((key)=>[
-            geometryFolder.add(state, key, 0, 10, 0.1).onChange(()=>regenerateGeometry(mesh, state)), 
-        ]);
-    return geometryFolder;
+    mesh.material.needsUpdate = true;
 }
