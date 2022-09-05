@@ -32120,37 +32120,64 @@ camera.position.set(0, 0, 5);
 camera.lookAt(new mod.Vector3(0, 0, 0));
 renderer.setSize(width, height);
 document.body.appendChild(renderer.domElement);
-const geometry = new mod.BoxGeometry();
-const material = new mod.MeshBasicMaterial({
-    color: "red",
-    wireframe: true
-});
-const cube = new mod.Mesh(geometry, material);
-scene.add(cube);
 scene.add(new mod.AxesHelper(5));
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 const stats = Stats();
 document.body.appendChild(stats.dom);
-const state = {
+const gui1 = new mod1.GUI({
+    name: "Configure Geometries"
+});
+const cube = addMesh("Cube", 0, mod.BoxGeometry, {
     width: 1,
     height: 1,
     depth: 1,
     widthSegments: 1,
     heightSegments: 1,
     depthSegments: 1
-};
-const gui1 = new mod1.GUI({
-    name: "Configure Cube"
 });
-const geometryFolder = gui1.addFolder("Geometry");
-geometryFolder.open();
-Object.keys(state).forEach((key)=>{
-    geometryFolder.add(state, key, 1, 30, 0.1).onChange(()=>regenerateGeometry(cube));
+addMesh("Sphere", 4, mod.SphereGeometry, {
+    radius: 1,
+    widthSegments: 8,
+    heightSegments: 6,
+    phiStart: 0,
+    phiLength: Math.PI * 2,
+    thetaStart: 0,
+    thetaLength: Math.PI
 });
+addMesh("Icosohedron", 8, mod.IcosahedronGeometry, {
+    radius: 1,
+    detail: 0
+}, (state)=>({
+        ...state,
+        detail: parseInt(state.detail)
+    }));
+addMesh("Torus", 12, mod.TorusGeometry, {
+    radius: 1,
+    tube: 0.4,
+    radialSegments: 8,
+    tubularSegments: 6,
+    arc: Math.PI * 2
+});
+addMesh("Torus Knot", 16, mod.TorusKnotGeometry, {
+    radius: 1,
+    tube: 0.4,
+    radialSegments: 64,
+    tubularSegments: 8,
+    p: 2,
+    q: 3
+});
+addMesh("Plane", 20, mod.PlaneGeometry, {
+    width: 1,
+    height: 1,
+    widthSegments: 1,
+    heightSegments: 1
+});
+const debugWindow = document.body.querySelector(".debug__content");
 renderer.setAnimationLoop(()=>{
     renderer.render(scene, camera);
     orbitControls.update();
     stats.update();
+    debugWindow.innerHTML = `Cube Matrix<br />${cube.matrix.elements.map((n)=>n.toFixed(1)).join("<br />")}`;
 });
 addEventListener("resize", ()=>{
     width = innerWidth;
@@ -32159,7 +32186,45 @@ addEventListener("resize", ()=>{
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 });
-function regenerateGeometry(cube) {
-    cube.geometry.dispose();
-    cube.geometry = new mod.BoxGeometry(state.width, state.height, state.depth, state.widthSegments, state.heightSegments, state.depthSegments);
+function addMesh(title, x, meshType, state, modifyState = null) {
+    const mesh = new mod.Mesh(new meshType(...Object.values(state)), new mod.MeshBasicMaterial({
+        color: "green",
+        wireframe: true
+    }));
+    mesh.position.x = x;
+    scene.add(mesh);
+    const properties = [
+        "Position",
+        "Rotation",
+        "Scale"
+    ];
+    const folder = gui1.addFolder(title);
+    addTransformationFolders(properties, folder, mesh);
+    addGeometryFolder("Geometry", folder, mesh, state, (mesh, state)=>{
+        mesh.geometry.dispose();
+        mesh.geometry = new meshType(...Object.values(modifyState ? modifyState(state) : state));
+    });
+    return mesh;
+}
+function addTransformationFolder(title, gui, object) {
+    const axes = [
+        "x",
+        "y",
+        "z"
+    ];
+    const transformationFolder = gui.addFolder(title);
+    axes.forEach((axis)=>{
+        transformationFolder.add(object[title.toLowerCase()] || {}, axis, -10, 10, 0.1);
+    });
+    return transformationFolder;
+}
+function addTransformationFolders(titles, gui, object) {
+    return titles.map((title)=>addTransformationFolder(title, gui, object));
+}
+function addGeometryFolder(title, folder, mesh, state, regenerateGeometry) {
+    const geometryFolder = folder.addFolder(title);
+    Object.keys(state).forEach((key)=>[
+            geometryFolder.add(state, key, 0, 10, 0.1).onChange(()=>regenerateGeometry(mesh, state)), 
+        ]);
+    return geometryFolder;
 }
