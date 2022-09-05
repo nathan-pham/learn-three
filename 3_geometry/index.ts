@@ -25,6 +25,46 @@ document.body.appendChild(stats.dom);
 // create a dat.GUI
 const gui = new dat.GUI({ name: "Configure Geometries" });
 
+// create material & material folder
+const material = new THREE.MeshBasicMaterial({
+    wireframe: false,
+    transparent: true,
+    side: THREE.DoubleSide,
+    // THREE.BackSide would be useful if the camera was inside of the geometry
+
+    map: new THREE.TextureLoader().load("/assets/course/grid.png"),
+    envMap: (() => {
+        const envTexture = new THREE.CubeTextureLoader().load(
+            ["px", "nx", "py", "ny", "pz", "nz"].map(
+                (path) => `/assets/course/${path}_50.png`
+            )
+        );
+        envTexture.mapping = THREE.CubeRefractionMapping;
+        return envTexture;
+    })(),
+});
+
+const materialData = {
+    color: material.color.getHex(),
+};
+
+const materialFolder = gui.addFolder("THREE.MeshBasicMaterial");
+materialFolder.add(material, "transparent").onChange(updateMaterial);
+materialFolder.add(material, "opacity", 0, 1, 0.01).onChange(updateMaterial);
+materialFolder.add(material, "wireframe");
+materialFolder.add(material, "reflectivity", 0, 1, 0.1);
+materialFolder.add(material, "refractionRatio", 0, 1, 0.1);
+materialFolder
+    .add(material, "combine", {
+        MultiplyOperation: THREE.MultiplyOperation, // default
+        MixOperation: THREE.MixOperation,
+        AddOperation: THREE.AddOperation,
+    })
+    .onChange(updateMaterial);
+materialFolder
+    .addColor(materialData, "color")
+    .onChange(() => material.color.setHex(Number(materialData.color)));
+
 // add meshes to the scene
 const cube = addMesh("Cube", 0, THREE.BoxGeometry, {
     width: 1,
@@ -55,7 +95,7 @@ addMesh(
     },
     (state) => ({
         ...state,
-        detail: parseInt(state.detail),
+        detail: parseInt(state.detail.toString()),
     })
 );
 
@@ -109,6 +149,12 @@ addEventListener("resize", () => {
     renderer.setSize(width, height);
 });
 
+function updateMaterial() {
+    material.side = Number(material.side);
+    material.combine = Number(material.combine);
+    material.needsUpdate = true;
+}
+
 /**
  * Utility to create several kinds of configurable meshes
  * @param title - GUI folder name
@@ -125,13 +171,13 @@ function addMesh(
     meshType: any,
     state: Record<string, number>,
     modifyState:
-        | ((state: Record<string, any>) => Record<string, any>)
+        | ((state: Record<string, number>) => Record<string, number>)
         | null = null
 ) {
     // create mesh
     const mesh = new THREE.Mesh(
         new meshType(...Object.values(state)),
-        new THREE.MeshBasicMaterial({ color: "green", wireframe: true })
+        material
     );
 
     mesh.position.x = x;

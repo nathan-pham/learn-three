@@ -32127,6 +32127,39 @@ document.body.appendChild(stats.dom);
 const gui1 = new mod1.GUI({
     name: "Configure Geometries"
 });
+const material = new mod.MeshBasicMaterial({
+    wireframe: false,
+    transparent: true,
+    side: mod.DoubleSide,
+    map: new mod.TextureLoader().load("/assets/course/grid.png"),
+    envMap: (()=>{
+        const envTexture = new mod.CubeTextureLoader().load([
+            "px",
+            "nx",
+            "py",
+            "ny",
+            "pz",
+            "nz"
+        ].map((path)=>`/assets/course/${path}_50.png`));
+        envTexture.mapping = mod.CubeRefractionMapping;
+        return envTexture;
+    })()
+});
+const materialData = {
+    color: material.color.getHex()
+};
+const materialFolder = gui1.addFolder("THREE.MeshBasicMaterial");
+materialFolder.add(material, "transparent").onChange(updateMaterial);
+materialFolder.add(material, "opacity", 0, 1, 0.01).onChange(updateMaterial);
+materialFolder.add(material, "wireframe");
+materialFolder.add(material, "reflectivity", 0, 1, 0.1);
+materialFolder.add(material, "refractionRatio", 0, 1, 0.1);
+materialFolder.add(material, "combine", {
+    MultiplyOperation: mod.MultiplyOperation,
+    MixOperation: mod.MixOperation,
+    AddOperation: mod.AddOperation
+}).onChange(updateMaterial);
+materialFolder.addColor(materialData, "color").onChange(()=>material.color.setHex(Number(materialData.color)));
 const cube = addMesh("Cube", 0, mod.BoxGeometry, {
     width: 1,
     height: 1,
@@ -32149,7 +32182,7 @@ addMesh("Icosohedron", 8, mod.IcosahedronGeometry, {
     detail: 0
 }, (state)=>({
         ...state,
-        detail: parseInt(state.detail)
+        detail: parseInt(state.detail.toString())
     }));
 addMesh("Torus", 12, mod.TorusGeometry, {
     radius: 1,
@@ -32186,11 +32219,13 @@ addEventListener("resize", ()=>{
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 });
+function updateMaterial() {
+    material.side = Number(material.side);
+    material.combine = Number(material.combine);
+    material.needsUpdate = true;
+}
 function addMesh(title, x, meshType, state, modifyState = null) {
-    const mesh = new mod.Mesh(new meshType(...Object.values(state)), new mod.MeshBasicMaterial({
-        color: "green",
-        wireframe: true
-    }));
+    const mesh = new mod.Mesh(new meshType(...Object.values(state)), material);
     mesh.position.x = x;
     scene.add(mesh);
     const properties = [
