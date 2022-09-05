@@ -34,7 +34,7 @@ document.body.appendChild(stats.dom);
 // create a dat.GUI
 const state = {
     rotationSpeed: 0.01,
-    rotate: true,
+    rotate: false,
 };
 
 const gui = new dat.GUI({ name: "Configure Cube" });
@@ -75,6 +75,7 @@ renderer.setAnimationLoop(() => {
     if (state.rotate) {
         cube.rotation.x += state.rotationSpeed;
         cube.rotation.y += state.rotationSpeed;
+        cube.rotation.z += state.rotationSpeed;
     }
 
     renderer.render(scene, camera);
@@ -83,7 +84,7 @@ renderer.setAnimationLoop(() => {
 });
 
 // resize window
-const windowResize = () => {
+addEventListener("resize", () => {
     width = innerWidth;
     height = innerHeight;
 
@@ -91,6 +92,4 @@ const windowResize = () => {
     camera.updateProjectionMatrix();
 
     renderer.setSize(width, height);
-};
-
-addEventListener("resize", windowResize);
+});

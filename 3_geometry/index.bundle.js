@@ -32115,9 +32115,9 @@ const mod1 = {
 let { innerWidth: width , innerHeight: height  } = window;
 const scene = new mod.Scene();
 const camera = new mod.PerspectiveCamera(75, width / height, 0.1, 1000);
+const renderer = new mod.WebGLRenderer();
 camera.position.set(0, 0, 5);
 camera.lookAt(new mod.Vector3(0, 0, 0));
-const renderer = new mod.WebGLRenderer();
 renderer.setSize(width, height);
 document.body.appendChild(renderer.domElement);
 const geometry = new mod.BoxGeometry();
@@ -32127,45 +32127,27 @@ const material = new mod.MeshBasicMaterial({
 });
 const cube = new mod.Mesh(geometry, material);
 scene.add(cube);
-const helper = new mod.AxesHelper(5);
-scene.add(helper);
+scene.add(new mod.AxesHelper(5));
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 const stats = Stats();
 document.body.appendChild(stats.dom);
 const state = {
-    rotationSpeed: 0.01,
-    rotate: false
+    width: 1,
+    height: 1,
+    depth: 1,
+    widthSegments: 1,
+    heightSegments: 1,
+    depthSegments: 1
 };
 const gui1 = new mod1.GUI({
     name: "Configure Cube"
 });
-const cubeFolder = gui1.addFolder("Cube");
-cubeFolder.open();
-const rotationFolder = cubeFolder.addFolder("Rotation");
-rotationFolder.add(cube.rotation, "x", 0, 2 * Math.PI, 0.1);
-rotationFolder.add(cube.rotation, "y", 0, 2 * Math.PI, 0.1);
-rotationFolder.add(cube.rotation, "z", 0, 2 * Math.PI, 0.1);
-rotationFolder.open();
-const positionFolder = cubeFolder.addFolder("Position");
-positionFolder.add(cube.position, "x", -5, 5, 0.1);
-positionFolder.add(cube.position, "y", -5, 5, 0.1);
-positionFolder.add(cube.position, "z", -5, 5, 0.1);
-const scaleFolder = cubeFolder.addFolder("Scale");
-scaleFolder.add(cube.scale, "x", 0, 5, 0.1);
-scaleFolder.add(cube.scale, "y", 0, 5, 0.1);
-scaleFolder.add(cube.scale, "z", 0, 5, 0.1);
-const animationFolder = gui1.addFolder("Animation");
-animationFolder.add(state, "rotationSpeed", 0, 0.1, 0.01);
-animationFolder.add(state, "rotate");
-cubeFolder.add(cube, "visible");
-const cameraFolder = gui1.addFolder("Camera");
-cameraFolder.add(camera.position, "z", 0, 10, 0.1);
+const geometryFolder = gui1.addFolder("Geometry");
+geometryFolder.open();
+Object.keys(state).forEach((key)=>{
+    geometryFolder.add(state, key, 1, 30, 0.1).onChange(()=>regenerateGeometry(cube));
+});
 renderer.setAnimationLoop(()=>{
-    if (state.rotate) {
-        cube.rotation.x += state.rotationSpeed;
-        cube.rotation.y += state.rotationSpeed;
-        cube.rotation.z += state.rotationSpeed;
-    }
     renderer.render(scene, camera);
     orbitControls.update();
     stats.update();
@@ -32177,3 +32159,7 @@ addEventListener("resize", ()=>{
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
 });
+function regenerateGeometry(cube) {
+    cube.geometry.dispose();
+    cube.geometry = new mod.BoxGeometry(state.width, state.height, state.depth, state.widthSegments, state.heightSegments, state.depthSegments);
+}
