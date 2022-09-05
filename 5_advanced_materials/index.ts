@@ -38,14 +38,22 @@ const materialData = {
         shininess: 1000,
         roughness: 0.5,
         metalness: 0.5,
+        clearcoat: 0,
+        clearcoatRoughness: 0,
     },
 };
 
 // add mesh to the scene
 // deno-lint-ignore no-explicit-any
+let material: any;
+
 const geometry = new THREE.TorusKnotGeometry();
-let material: any = new THREE.MeshBasicMaterial(materialData.props);
-let mesh = new THREE.Mesh(geometry, material);
+material = generateMaterial(false);
+const mesh = new THREE.Mesh(geometry, material);
+
+const matcapTexture = new THREE.TextureLoader().load(
+    "/assets/course/copper.png"
+);
 
 scene.add(mesh);
 scene.add(createLight(10, 10, 10));
@@ -54,7 +62,7 @@ scene.add(createLight(-10, -10, -10));
 // create a dat.GUI
 const gui = new dat.GUI({ name: "Configure Material" });
 gui.add(materialData, "material", materialsOptions).onChange(() => {
-    material = new materials[Number(materialData.material)](materialData.props);
+    material = generateMaterial();
     mesh.material = material;
 });
 
@@ -92,6 +100,10 @@ debugWindow.innerHTML =
 
 // render loop
 renderer.setAnimationLoop(() => {
+    mesh.rotation.x += 0.01;
+    mesh.rotation.y += 0.01;
+    mesh.rotation.z += 0.01;
+
     renderer.render(scene, camera);
     orbitControls.update();
     stats.update();
@@ -116,4 +128,18 @@ function createLight(...position: [number, number, number]) {
 
 function updateMaterial() {
     mesh.material.needsUpdate = true;
+}
+
+function generateMaterial(setMaterial = true) {
+    const materialType = materials[Number(materialData.material)];
+    material = new materialType(materialData.props);
+    if (materialType.name === "MeshMatcapMaterial") {
+        material.matcap = matcapTexture;
+    }
+
+    if (setMaterial) {
+        mesh.material = material;
+    }
+
+    return material;
 }

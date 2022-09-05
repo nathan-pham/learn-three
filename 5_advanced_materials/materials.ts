@@ -12,6 +12,9 @@ export const materials = [
     THREE.MeshLambertMaterial,
     THREE.MeshPhongMaterial,
     THREE.MeshStandardMaterial,
+    THREE.MeshPhysicalMaterial,
+    THREE.MeshMatcapMaterial, // high performance (prebake all lights)
+    THREE.MeshToonMaterial,
 ];
 
 export const materialsOptions = materials.reduce(
@@ -29,9 +32,10 @@ export const materialsProps = {
     shininess: createProp("range", 0, 2048),
     roughness: createProp("range", 0, 1),
     metalness: createProp("range", 0, 1),
+    clearcoat: createProp("range", 0, 1),
+    clearcoatRoughness: createProp("range", 0, 1),
 };
 
-// deno-lint-ignore no-explicit-any
 function createProp(type: string, min = 0, max = 0) {
     return { type, min, max };
 }

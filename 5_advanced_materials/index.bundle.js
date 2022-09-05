@@ -32122,7 +32122,10 @@ const materials = [
     mod.MeshNormalMaterial,
     mod.MeshLambertMaterial,
     mod.MeshPhongMaterial,
-    mod.MeshStandardMaterial, 
+    mod.MeshStandardMaterial,
+    mod.MeshPhysicalMaterial,
+    mod.MeshMatcapMaterial,
+    mod.MeshToonMaterial, 
 ];
 const materialsOptions = materials.reduce((acc, curr, i)=>({
         ...acc,
@@ -32134,7 +32137,9 @@ const materialsProps = {
     specular: createProp("color"),
     shininess: createProp("range", 0, 2048),
     roughness: createProp("range", 0, 1),
-    metalness: createProp("range", 0, 1)
+    metalness: createProp("range", 0, 1),
+    clearcoat: createProp("range", 0, 1),
+    clearcoatRoughness: createProp("range", 0, 1)
 };
 function createProp(type, min = 0, max = 0) {
     return {
@@ -32164,12 +32169,16 @@ const materialData = {
         specular: colors.highlight.getHex(),
         shininess: 1000,
         roughness: 0.5,
-        metalness: 0.5
+        metalness: 0.5,
+        clearcoat: 0,
+        clearcoatRoughness: 0
     }
 };
+let material;
 const geometry = new mod.TorusKnotGeometry();
-let material = new mod.MeshBasicMaterial(materialData.props);
-let mesh = new mod.Mesh(geometry, material);
+material = generateMaterial(false);
+const mesh = new mod.Mesh(geometry, material);
+const matcapTexture = new mod.TextureLoader().load("/assets/course/copper.png");
 scene.add(mesh);
 scene.add(createLight(10, 10, 10));
 scene.add(createLight(-10, -10, -10));
@@ -32177,7 +32186,7 @@ const gui1 = new mod1.GUI({
     name: "Configure Material"
 });
 gui1.add(materialData, "material", materialsOptions).onChange(()=>{
-    material = new materials[Number(materialData.material)](materialData.props);
+    material = generateMaterial();
     mesh.material = material;
 });
 Object.keys(materialsProps).forEach((_key)=>{
@@ -32202,6 +32211,9 @@ Object.keys(materialsProps).forEach((_key)=>{
 const debugWindow = document.body.querySelector(".debug__content");
 debugWindow.innerHTML = 'Note: emissive means the color will show even without lighting. Also, some options like "specular" will throw warnings in the console because they don\'t exist on all materials';
 renderer.setAnimationLoop(()=>{
+    mesh.rotation.x += 0.01;
+    mesh.rotation.y += 0.01;
+    mesh.rotation.z += 0.01;
     renderer.render(scene, camera);
     orbitControls.update();
     stats.update();
@@ -32220,4 +32232,15 @@ function createLight(...position) {
 }
 function updateMaterial() {
     mesh.material.needsUpdate = true;
+}
+function generateMaterial(setMaterial = true) {
+    const materialType = materials[Number(materialData.material)];
+    material = new materialType(materialData.props);
+    if (materialType.name === "MeshMatcapMaterial") {
+        material.matcap = matcapTexture;
+    }
+    if (setMaterial) {
+        mesh.material = material;
+    }
+    return material;
 }
