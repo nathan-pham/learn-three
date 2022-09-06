@@ -36,7 +36,7 @@ const material = new THREE.MeshBasicMaterial({
     envMap: (() => {
         const envTexture = new THREE.CubeTextureLoader().load(
             ["px", "nx", "py", "ny", "pz", "nz"].map(
-                (path) => `/assets/course/${path}_50.png`
+                (path) => `/assets/course/skybox/nature/${path}_50.png`
             )
         );
         envTexture.mapping = THREE.CubeRefractionMapping;
